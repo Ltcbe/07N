@@ -11,11 +11,12 @@ services:
       - db_data:/var/lib/mysql
       - ./db/init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "mysql -uroot -prootpwd -e 'SELECT 1' || exit 1"]
+      test: ["CMD-SHELL", "mysql -h localhost -uroot -prootpwd -e 'SELECT 1' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 40s
+
 
 
 
