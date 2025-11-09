@@ -11,10 +11,12 @@ services:
       - db_data:/var/lib/mysql
       - ./db/init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-uirail", "-pirailpwd"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -prootpwd || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
+
 
   backend:
     build: ./backend
