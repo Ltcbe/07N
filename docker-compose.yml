@@ -11,13 +11,14 @@ services:
       - db_data:/var/lib/mysql
       - ./db/init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-pirailpwd"]
+      test: ["CMD", "mysqladmin", "ping", "-uirail", "-pirailpwd"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   backend:
     build: ./backend
+    restart: unless-stopped
     environment:
       DB_DSN: "mariadb+mariadbconnector://irail:irailpwd@db:3306/irail"
       IRAIL_BASE: "https://api.irail.be"
@@ -32,6 +33,7 @@ services:
 
   worker:
     build: ./backend
+    restart: unless-stopped
     environment:
       DB_DSN: "mariadb+mariadbconnector://irail:irailpwd@db:3306/irail"
       IRAIL_BASE: "https://api.irail.be"
@@ -43,6 +45,7 @@ services:
 
   frontend:
     build: ./frontend
+    restart: unless-stopped
     depends_on:
       - backend
     ports:
