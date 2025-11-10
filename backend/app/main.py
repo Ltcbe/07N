@@ -81,7 +81,7 @@ print("⏱️  Collecteur iRail planifié (liveboard toutes les 1h, réseau comp
 app.include_router(trains.router)
 app.include_router(stations.router)
 app.include_router(connections.router)
-app.include_router(network.router)
+
 
 
 # --- Route de santé
