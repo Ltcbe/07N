@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: mariadb:11
@@ -9,8 +7,8 @@ services:
       MARIADB_DATABASE: irail
       MARIADB_USER: irail
       MARIADB_PASSWORD: irailpwd
-    volumes:
-      - db_data:/var/lib/mysql
+    networks:
+      - app-net
 
   backend:
     build: ./backend
@@ -22,6 +20,8 @@ services:
       MARIADB_PASSWORD: irailpwd
     depends_on:
       - db
+    networks:
+      - app-net
     ports:
       - "1788:1788"
 
@@ -30,8 +30,14 @@ services:
     restart: always
     depends_on:
       - backend
+    networks:
+      - app-net
+      - dokploy-network   # ✅ reste visible de Dockploy
     ports:
       - "8081:80"
 
-volumes:
-  db_data:
+networks:
+  app-net:
+    driver: bridge
+  dokploy-network:
+    external: true
