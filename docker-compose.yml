@@ -15,11 +15,12 @@ services:
     networks:
       - app-net
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -prootpwd || exit 1"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -prootpwd || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 15
-      start_period: 30s   # ⏳ Laisse MariaDB le temps de s’initialiser
+      retries: 20
+      start_period: 60s
+
 
 
 
