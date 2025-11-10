@@ -51,7 +51,7 @@ services:
     environment:
       - VITE_API_BASE=/api       # ✅ Disponible à l'exécution aussi
     ports:
-      - "8085:80"
+      - "8765:80"
     networks:
       - app-net
       - dokploy-network          # Pour Dockploy HTTPS externe (à garder)
