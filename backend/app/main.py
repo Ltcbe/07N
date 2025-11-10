@@ -4,7 +4,7 @@ from time import time
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy.orm import Session
 from app.db import SessionLocal
-from app.routers import trains, stations, connections, network
+from app.routers import trains, stations, connections
 from app.services.collector import collect_all_trains
 from app.services.full_network import collect_full_network
 
