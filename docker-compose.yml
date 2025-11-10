@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   db:
     image: mariadb:11
@@ -9,39 +11,27 @@ services:
       MARIADB_PASSWORD: irailpwd
     volumes:
       - db_data:/var/lib/mysql
-      - ./db/init:/docker-entrypoint-initdb.d
 
   backend:
     build: ./backend
+    restart: always
     environment:
-      DB_DSN: "mysql+pymysql://irail:irailpwd@db:3306/irail"
-      IRAIL_BASE: "https://api.irail.be"
-      RATE_LIMIT_RPM: "60"
-      CORS_ORIGINS: "http://localhost:5173"
+      MARIADB_HOST: db
+      MARIADB_DATABASE: irail
+      MARIADB_USER: irail
+      MARIADB_PASSWORD: irailpwd
     depends_on:
       - db
     ports:
       - "1788:1788"
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "1788"]
-
-  worker:
-    build: ./backend
-    environment:
-      DB_DSN: "mysql+pymysql://irail:irailpwd@db:3306/irail"
-      IRAIL_BASE: "https://api.irail.be"
-      RATE_LIMIT_RPM: "60"
-    depends_on:
-      - db
-    command: ["python", "app/worker.py"]
 
   frontend:
     build: ./frontend
+    restart: always
     depends_on:
       - backend
     ports:
-      - "5173:80"
-    restart: always
+      - "8080:80"
 
 volumes:
   db_data:
-
