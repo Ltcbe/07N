@@ -1,4 +1,9 @@
+version: "3.9"
+
 services:
+  # --------------------
+  # 🗄️ Base de données
+  # --------------------
   db:
     image: mariadb:11
     restart: always
@@ -7,9 +12,14 @@ services:
       MARIADB_DATABASE: irail
       MARIADB_USER: irail
       MARIADB_PASSWORD: irailpwd
+    volumes:
+      - db_data:/var/lib/mysql
     networks:
       - app-net
 
+  # --------------------
+  # ⚙️ Backend FastAPI
+  # --------------------
   backend:
     build: ./backend
     restart: always
@@ -18,26 +28,41 @@ services:
       MARIADB_DATABASE: irail
       MARIADB_USER: irail
       MARIADB_PASSWORD: irailpwd
+      # Variables personnalisées si besoin
+      LOG_LEVEL: info
     depends_on:
       - db
+    expose:
+      - "1788"
     networks:
       - app-net
-    ports:
-      - "1788:1788"
+    command: >
+      uvicorn app.main:app --host 0.0.0.0 --port 1788
 
+  # --------------------
+  # 🌐 Frontend React + Nginx
+  # --------------------
   frontend:
     build: ./frontend
     restart: always
     depends_on:
       - backend
-    networks:
-      - app-net
-      - dokploy-network   # ✅ reste visible de Dockploy
+    environment:
+      # Utiliser un chemin relatif pour éviter le "mixed content" HTTPS
+      - VITE_API_BASE=/api
     ports:
       - "8081:80"
+    networks:
+      - app-net
+      - dokploy-network   # Pour Dockploy HTTPS externe (ne pas retirer)
+    # Nginx gère le proxy interne vers backend
+    # cf. frontend/nginx.conf
 
 networks:
   app-net:
     driver: bridge
   dokploy-network:
     external: true
+
+volumes:
+  db_data:
