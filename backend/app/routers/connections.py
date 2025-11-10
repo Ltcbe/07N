@@ -1,39 +1,90 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from time import time
+from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy.orm import Session
-from app.db import get_db
-from app.services.connections import fetch_irail_connections
-from app.models.train import TrainRecord
-from datetime import datetime
+from app.db import SessionLocal
+from app.routers import trains, stations, connections, network
+from app.services.collector import collect_all_trains
+from app.services.full_network import collect_full_network
 
-router = APIRouter(prefix="/connections", tags=["Connections"])
 
-@router.get("")
-def get_connections(from_station: str, to_station: str, db: Session = Depends(get_db)):
-    """
-    Retourne tous les trajets entre deux gares belges.
-    Exemple : /connections?from_station=Brussels-Central&to_station=Gent-Sint-Pieters
-    """
-    if not from_station or not to_station:
-        raise HTTPException(400, detail="Les deux gares doivent être précisées.")
+# --- Application FastAPI
+app = FastAPI(title="iRail Backend - Full Belgian Rail Network")
 
+# --- Middleware CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "*",  # tu peux restreindre à ["https://time.terminalcommun.be", "http://localhost:5173"]
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# --- Middleware de log HTTP
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time()
+    client_ip = request.client.host if request.client else "?"
+    method = request.method
+    path = request.url.path
+    query = request.url.query
+
+    print(f"➡️  {client_ip} → {method} {path}?{query}")
     try:
-        results = fetch_irail_connections(from_station, to_station)
+        response = await call_next(request)
     except Exception as e:
-        raise HTTPException(500, detail=f"Erreur iRail: {e}")
+        process_time = (time() - start_time) * 1000
+        print(f"💥  {method} {path} ERREUR {e} ({process_time:.2f} ms)")
+        raise e
 
-    # Sauvegarde chaque connexion en DB pour analyse ultérieure
-    for t in results:
-        record = TrainRecord(
-            train_number=t["trainNumber"],
-            departure_station=t["departureStation"],
-            arrival_station=t["arrivalStation"],
-            scheduled_time=t["scheduledDeparture"],
-            actual_time=t["scheduledArrival"],
-            delay=t["delayArrival"],
-            status="delayed" if t["delayArrival"] > 0 else "on-time",
-            created_at=datetime.utcnow(),
-        )
-        db.add(record)
-    db.commit()
+    process_time = (time() - start_time) * 1000
+    print(f"⬅️  {method} {path} → {response.status_code} ({process_time:.2f} ms)")
+    return response
 
-    return results
+
+# --- Collecte horaire des trains en direct (toutes les gares principales)
+def start_collector():
+    db: Session = SessionLocal()
+    try:
+        collect_all_trains(db)
+    finally:
+        db.close()
+
+
+# --- Collecte complète du réseau ferroviaire (toutes les gares, toutes les connexions)
+def start_network_collector():
+    db: Session = SessionLocal()
+    try:
+        collect_full_network(db)
+    finally:
+        db.close()
+
+
+# --- Planificateur automatique
+scheduler = BackgroundScheduler()
+
+# Collecte partielle (liveboard)
+scheduler.add_job(start_collector, "interval", hours=1, id="irail_collector")
+
+# Collecte complète du réseau (tous les trajets)
+scheduler.add_job(start_network_collector, "cron", hour="3", id="full_network_collector")
+
+scheduler.start()
+print("⏱️  Collecteur iRail planifié (liveboard toutes les 1h, réseau complet à 3h du matin)")
+
+
+# --- Routes API
+app.include_router(trains.router)
+app.include_router(stations.router)
+app.include_router(connections.router)
+app.include_router(network.router)
+
+
+# --- Route de santé
+@app.get("/health")
+def health():
+    return {"status": "ok"}
