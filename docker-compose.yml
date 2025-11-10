@@ -31,7 +31,7 @@ services:
     depends_on:
       - db
     expose:
-      - "1788"
+      - "1788:1788"
     networks:
       - app-net
     command: >
