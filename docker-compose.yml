@@ -43,20 +43,23 @@ services:
   # 🌐 Frontend React + Nginx
   # --------------------
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_BASE=/api     # ✅ Injectée au moment du build (npm run build)
     restart: always
     depends_on:
       - backend
     environment:
-      # Utiliser un chemin relatif pour éviter le "mixed content" HTTPS
-      - VITE_API_BASE=/api
+      - VITE_API_BASE=/api       # ✅ Disponible à l'exécution aussi
     ports:
       - "8081:80"
     networks:
       - app-net
-      - dokploy-network   # Pour Dockploy HTTPS externe (ne pas retirer)
+      - dokploy-network          # Pour Dockploy HTTPS externe (à garder)
     # Nginx gère le proxy interne vers backend
     # cf. frontend/nginx.conf
+
 
 networks:
   app-net:
