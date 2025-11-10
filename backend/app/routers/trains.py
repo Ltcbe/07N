@@ -21,7 +21,7 @@ def _as_dict(obj):
         "createdAt": obj.created_at.isoformat() if obj.created_at else None,
     }
 
-@router.get("/")
+@router.get("")
 def get_trains(station: str, date: str, db: Session = Depends(get_db)):
     try:
         date_obj = datetime.strptime(date, "%Y-%m-%d")
