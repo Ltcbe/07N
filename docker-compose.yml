@@ -1,6 +1,8 @@
+version: "3.9"
+
 services:
   # --------------------
-  # 🗄️ Base de données
+  # 🗄️ Base de données MariaDB
   # --------------------
   db:
     image: mariadb:11
@@ -14,6 +16,11 @@ services:
       - db_data:/var/lib/mysql
     networks:
       - app-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # --------------------
   # ⚙️ Backend FastAPI
@@ -21,17 +28,19 @@ services:
   backend:
     build: ./backend
     restart: always
-    environment:
-      MARIADB_HOST: db
-      MARIADB_DATABASE: irail
-      MARIADB_USER: irail
-      MARIADB_PASSWORD: irailpwd
-      # Variables personnalisées si besoin
-      LOG_LEVEL: info
     depends_on:
-      - db
-    expose:
-      - "1788:1788"
+      db:
+        condition: service_healthy
+    environment:
+      # ⚙️ Variables attendues par app/db.py
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: irail
+      DB_USER: irail
+      DB_PASSWORD: irailpwd
+      LOG_LEVEL: info
+    ports:
+      - "1788:1788"              # ✅ exposition du backend vers l’extérieur
     networks:
       - app-net
     command: >
@@ -44,21 +53,22 @@ services:
     build:
       context: ./frontend
       args:
-        - VITE_API_BASE=/api     # ✅ Injectée au moment du build (npm run build)
+        - VITE_API_BASE=/api     # ✅ injecté au build pour Vite
     restart: always
     depends_on:
       - backend
     environment:
-      - VITE_API_BASE=/api       # ✅ Disponible à l'exécution aussi
+      - VITE_API_BASE=/api       # ✅ accessible au runtime (Nginx proxy)
     ports:
-      - "8765:80"
+      - "8765:80"                # Application accessible sur http://localhost:8765
     networks:
       - app-net
-      - dokploy-network          # Pour Dockploy HTTPS externe (à garder)
-    # Nginx gère le proxy interne vers backend
-    # cf. frontend/nginx.conf
+      - dokploy-network          # Pour HTTPS externe via Dokploy
+    # Nginx gère le proxy interne /api → backend:1788 (voir nginx.conf)
 
-
+# --------------------
+# 🔗 Réseaux & Volumes
+# --------------------
 networks:
   app-net:
     driver: bridge
