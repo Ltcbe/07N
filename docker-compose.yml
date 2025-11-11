@@ -1,7 +1,4 @@
 services:
-  # --------------------
-  # 🗄️ Base de données MariaDB
-  # --------------------
   db:
     image: mariadb:11
     container_name: sncb4-db
@@ -13,81 +10,47 @@ services:
       MARIADB_PASSWORD: irailpwd
     volumes:
       - db_data:/var/lib/mysql
-    networks:
-      - app-net
     healthcheck:
-      test: ["CMD", "bash", "-c", "mysql -h 127.0.0.1 -uroot -prootpwd -e 'SELECT 1' > /dev/null 2>&1"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p${MARIADB_ROOT_PASSWORD} --silent"]
       interval: 10s
-      timeout: 10s
-      retries: 20
-      start_period: 90s
+      timeout: 5s
+      retries: 10
+    networks: [app-net]
 
-
-  # --------------------
-  # ⚙️ Backend FastAPI
-  # --------------------
   backend:
-    build: ./backend
-    container_name: sncb2-backend
-    restart: always
+    build:
+      context: ./backend
+    container_name: sncb4-backend
+    restart: unless-stopped
+    environment:
+      # Deux options :
+      # 1) Laisser le DSN par défaut de app/db.py
+      # 2) Ou fixer explicitement le DSN via variable d'env :
+      DB_DSN: mysql+pymysql://irail:irailpwd@db:3306/irail
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      MARIADB_HOST: db
-      MARIADB_DATABASE: irail
-      MARIADB_USER: irail
-      MARIADB_PASSWORD: irailpwd
-      LOG_LEVEL: info
-    volumes:
-      - ./backend:/app
     ports:
       - "1788:1788"
-    networks:
-      - app-net
-    command: >
-      sh -c "
-        echo '⏳ Attente de la base de données...' &&
-        until mysqladmin ping -h db -u$$MARIADB_USER -p$$MARIADB_PASSWORD --silent; do
-          sleep 2;
-        done &&
-        echo '✅ Base de données prête, démarrage du backend.' &&
-        uvicorn app.main:app --host 0.0.0.0 --port 1788
-      "
+    networks: [app-net]
 
-  # --------------------
-  # 🌐 Frontend React + Nginx
-  # --------------------
   frontend:
     build:
       context: ./frontend
       args:
-        - VITE_API_BASE=/api
-    container_name: sncb2-frontend
-    restart: always
+        # Laisser '/api' si on utilise le proxy Nginx → backend
+        VITE_API_BASE: /api
+    container_name: sncb4-frontend
+    restart: unless-stopped
     depends_on:
       - backend
-    environment:
-      - VITE_API_BASE=/api
     ports:
       - "8765:80"
-    networks:
-      - app-net
-      - dokploy-network
-    # Le proxy Nginx redirige /api vers le backend
-    # Voir frontend/nginx.conf pour la config
+    networks: [app-net]
 
-# --------------------
-# 🌉 Réseaux & volumes
-# --------------------
 networks:
   app-net:
     driver: bridge
-  dokploy-network:
-    external: true
 
 volumes:
   db_data:
-
-
-  
