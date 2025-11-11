@@ -10,12 +10,12 @@ services:
       MARIADB_PASSWORD: irailpwd
     volumes:
       - db_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p${MARIADB_ROOT_PASSWORD} --silent"]
-      interval: 10s
-      timeout: 5s
-      retries: 15
-      start_period: 40s
+    #healthcheck:
+    #  test: ["CMD-SHELL", "mysqladmin ping -h localhost -p${MARIADB_ROOT_PASSWORD} --silent"]
+    #  interval: 10s
+    #  timeout: 5s
+    #  retries: 15
+    #  start_period: 40s
 
     networks: [app-net]
 
