@@ -15,7 +15,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 15
-  start_period: 40s
+      start_period: 40s
 
     networks: [app-net]
 
