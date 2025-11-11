@@ -1,23 +1,23 @@
 services:
-  db:
-    image: mariadb:10.11
-    container_name: sncb4-db
-    restart: always
-    environment:
-      MARIADB_ROOT_PASSWORD: rootpwd
-      MARIADB_DATABASE: irail
-      MARIADB_USER: irail
-      MARIADB_PASSWORD: irailpwd
-    volumes:
-      - db_data:/var/lib/mysql
-    #healthcheck:
-    #  test: ["CMD-SHELL", "mysqladmin ping -h localhost -p${MARIADB_ROOT_PASSWORD} --silent"]
-    #  interval: 10s
-    #  timeout: 5s
-    #  retries: 15
-    #  start_period: 40s
-
-    networks: [app-net]
+db:
+  image: mariadb:10.11
+  container_name: sncb4-db
+  restart: always
+  environment:
+    MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+    MARIADB_DATABASE: ${MARIADB_DATABASE}
+    MARIADB_USER: ${MARIADB_USER}
+    MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+  volumes:
+    - db_data:/var/lib/mysql
+  healthcheck:
+    test: ["CMD-SHELL", "mysqladmin ping -h localhost -p${MARIADB_ROOT_PASSWORD} --silent"]
+    interval: 10s
+    timeout: 5s
+    retries: 20
+    start_period: 90s
+  networks:
+    - app-net
 
   backend:
     build:
